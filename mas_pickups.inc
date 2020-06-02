@@ -35,11 +35,6 @@
 
 #define INVALID_PICKUP	MAX_PICKUPS+1
 
-// Key for triggering pickups of the PICKUP_KEY type (optionally)
-#if !defined PICKUP_KEY
-	#define PICKUP_KEY 1024	// L.Alt
-#endif
-
 
 #if !defined PICKUP_SYNC_STANDART_ANTIFLOOD
 	#define PICKUP_SYNC_STANDART_ANTIFLOOD 3
@@ -63,14 +58,14 @@
 
 
 #define PICKUP_STANDART			0	// Standart pickup
-#define PICKUP_ON_KEY			1	// Pickup on key
-#define PICKUP_ONLY_CAR			2	// Only car pickup
+// #define PICKUP_ON_KEY			1	// Pickup on key
+// #define PICKUP_ONLY_CAR			2	// Only car pickup
 
 
 #define PICKUP_MODE_DEFAULT 	0	// 
-#define PICKUP_MODE_NONE 		2	// 
-#define PICKUP_MODE_TEMP 		3	// Temporary pickup
-#define PICKUP_MODE_SYNC 		4	// Synchronized pickup
+#define PICKUP_MODE_NONE 		1	// 
+// #define PICKUP_MODE_TEMP 		2	// Temporary pickup
+// #define PICKUP_MODE_SYNC 		3	// Synchronized pickup
 
 
 forward OnPlayerUseSyncPickup(playerid, pickupid, syncpickupid);
@@ -107,15 +102,7 @@ static pickupNow[MAX_PLAYERS];
 static pickupTotalPickup = 0;
 
 
-
-//		PickupCreate(...)
-//		Arguments: 
-//		- pick_Function - function to call when pickup is pickedup
-//		- the other arguments are from standard pickups
-//		
-//		returns: id of created pickup
-//
-PickupCreate(pick_Function[23], 
+PickupFunction PickupCreate(pick_Function[23], 
 					pick_Model, 
 					pick_Type, 
 					Float:pick_X, 
@@ -124,13 +111,14 @@ PickupCreate(pick_Function[23],
 					pick_VirtualWorld = 0, 
 					pickup_Interior = 0, 
 					pickup_Playerid = 0, 
-					Float:streamdistance = STREAMER_PICKUP_SD) {
+					Float:streamdistance = STREAMER_PICKUP_SD,
+					STREAMER_TAG_AREA areaid = STREAMER_TAG_AREA -1) {
 	if(pickupTotalPickup == MAX_PICKUPS) return 1;
 
 	if(strlen(pick_Function) > 23) return 1;
 	
 	new mas_tmp_id = CreateDynamicPickup(pick_Model, pick_Type, pick_X, pick_Y, pick_Z, pick_VirtualWorld, pickup_Interior, 
-	pickup_Playerid, streamdistance); 
+	pickup_Playerid, streamdistance, areaid); 
 
 	getPickup[mas_tmp_id][pickX] = pick_X;
 	getPickup[mas_tmp_id][pickY] = pick_Y;
@@ -140,15 +128,20 @@ PickupCreate(pick_Function[23],
 	getPickup[mas_tmp_id][pickType] = pick_Type;
 	getPickup[mas_tmp_id][pickVirtualWorld] = pick_VirtualWorld;
 	getPickup[mas_tmp_id][pickInterior] = pickup_Interior;
+
+	/*
 	getPickup[mas_tmp_id][pickPlayerid] = pickup_Playerid;
 	getPickup[mas_tmp_id][pickClass] = PICKUP_STANDART;
 	getPickup[mas_tmp_id][pickMode] = PICKUP_MODE_NONE;
 	getPickup[mas_tmp_id][pickStreamDistance] = streamdistance;
+	*/
 
-	new mas_temp_func[32];
-	strcat(mas_temp_func, "_mas_pck_");
-	strcat(mas_temp_func, pick_Function);
-	getPickup[mas_tmp_id][pickFunction] = mas_temp_func;
+	if(pick_Function) {
+		new mas_temp_func[32];
+		strcat(mas_temp_func, "_mas_pck_");
+		strcat(mas_temp_func, pick_Function);
+		getPickup[mas_tmp_id][pickFunction] = mas_temp_func;
+	}
 
 	pickupTotalPickup++;
 	return mas_tmp_id;	
@@ -161,25 +154,25 @@ SyncPickup(syncid, withid) {
 	return 1;
 }
 
-
+/* // Coming soon
 SyncLastPickups() {
 	getPickup[pickupTotalPickup][pickSynced] = pickupTotalPickup--;
 	getPickup[pickupTotalPickup--][pickSynced] = pickupTotalPickup;
 	return 1;
 }
-
+*/
 
 PickupSetAntiFlood(id, interval) {
 	getPickup[id][pickAntiFlood] = interval;
 	return 1;
 }
 
-
+/* Coming soon
 PickupSetAntiFloodLast(interval) {
 	getPickup[pickupTotalPickup--][pickAntiFlood] = interval;
 	return 1;
 }
-
+*/
 
 public OnPlayerPickUpDynamicPickup(playerid, pickupid) {
 
@@ -246,7 +239,6 @@ public OnGameModeInit() {
 #if    defined    _mas_pck_OnGameModeInit
 forward _mas_pck_OnGameModeInit();
 #endif 
-
 
 
 PickupFunction pickupAntiFloodUpdate() {
