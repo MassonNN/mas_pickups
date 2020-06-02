@@ -20,6 +20,19 @@ GetPickupVirtualWorldEx(id)
 
 GetPickupPlayerid(id)
 
+ReplacePickup(&id, Float:new_x, Float:new_y, Float:new_z, new_vw = -1, new_int = -1)
+
+SetPickupModel(&id, model)
+
+SetPickupVirtualWorld(&id, world)
+
+SetPickupType(&id, type)
+
+PickupSetOnKey(id)
+
 PickupEmitate(playerid, id)
 
 forward OnPlayerUseSyncPickup(playerid, pickupid, syncpickupid);
+
+
+
