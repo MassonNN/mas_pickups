@@ -6,7 +6,7 @@
 //			This include will make it easier to work with pickups, 
 //			add functionality, and fix some known issues
 
-//			Version: 0.7
+//			Version: 0.7 
 //			Last Release: 03.06.2020
 
 //			Dependencies:
@@ -35,7 +35,7 @@
 #endif
 
 
-#define INVALID_PICKUP	MAX_PICKUPS+1
+#define INVALID_PICKUP	MAX_PICKUPS
 
 
 #if !defined PICKUP_SYNC_STANDART_ANTIFLOOD
@@ -130,16 +130,18 @@ static pickupTotalPickup = 0;
 
 
 //
-PickupCreate(pick_Function[MAX_PICK_FUNC_NAME], 
-					pick_Model, 
-					pick_Type, 
-					Float:pick_X, 
-					Float:pick_Y, 
-					Float:pick_Z, 
-					pick_VirtualWorld = 0, 
-					pick_Interior = 0, 
-					pick_Playerid = 0, 
-					Float:streamdistance = STREAMER_PICKUP_SD) {
+PickupCreate(
+	pick_Function[MAX_PICK_FUNC_NAME], 
+	pick_Model, 
+	pick_Type, 
+	Float:pick_X, 
+	Float:pick_Y, 
+	Float:pick_Z, 
+	pick_VirtualWorld = 0, 
+	pick_Interior = 0, 
+	pick_Playerid = 0, 
+	Float:streamdistance = STREAMER_PICKUP_SD
+) {
 	if(pickupTotalPickup == MAX_PICKUPS) return 1;
 
 	if(strlen(pick_Function) > MAX_PICK_FUNC_NAME) return 1;
@@ -230,7 +232,7 @@ ReplacePickup(&id, Float:new_x, Float:new_y, Float:new_z, new_vw = -1, new_int =
 }
 
 
-DeletePickup(id) {
+PickupFunction DeletePickup(id) {
 	#if defined _YSF_included
 		if(!IsValidPickup(id)) return 0;
 	#else 
@@ -353,7 +355,7 @@ SetPickupType(&id, type) {
 
 
 //
-PickupSetOnKey(id) {
+PickupFunction PickupSetOnKey(id) {
 	#if defined _YSF_included
 		if(!IsValidPickup(id)) return 0;
 	#else 
@@ -387,7 +389,7 @@ PickupSetOnKey(id) {
 
 
 //
-PickupSetOnPickup(id) {
+PickupFunction PickupSetOnPickup(id) {
 	#if defined _YSF_included
 		if(!IsValidPickup(id)) return 0;
 	#else 
@@ -540,19 +542,19 @@ PickupFunction pickupAntiFloodUpdate() {
 }
 
 //
-PickupFunction GetPickupModelEx(id) return getPickup[id][pickModel];
+GetPickupModelEx(id) return getPickup[id][pickModel];
 
 //
-PickupFunction GetPickupTypeEx(id) return getPickup[id][pickType];
+GetPickupTypeEx(id) return getPickup[id][pickType];
 
 //
-PickupFunction GetPickupVirtualWorldEx(id) return getPickup[id][pickVirtualWorld];
+GetPickupVirtualWorldEx(id) return getPickup[id][pickVirtualWorld];
 
 //
-PickupFunction GetPickupPlayerid(id) return getPickup[id][pickPlayerid];
+GetPickupPlayerid(id) return getPickup[id][pickPlayerid];
 
 //
-PickupFunction IsPickupCreated(id) {
+IsPickupCreated(id) {
 	if(getPickup[id][pickClass] > 0) return true;
 	else return false;
 }
