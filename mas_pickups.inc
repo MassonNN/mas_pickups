@@ -6,14 +6,16 @@
 //			This include will make it easier to work with pickups, 
 //			add functionality, and fix some known issues
 
-//			Version: 0.6
-//			Last Release: 02.06.2020
+//			Version: 0.7
+//			Last Release: 03.06.2020
 
 //			Dependencies:
 //			- Streamer
 
 //			Compatibility:
 //			- YSF
+//			- ePickups
+//			- foreach
 
 
 #if defined _MASSON_PICKUP
@@ -81,16 +83,18 @@
 	#define MAS_PCK_KEY 1024 // L.ALT
 #endif
 
+
 #if !defined MAS_PCK_AREA_SIZE
-	#define MAS_PCK_AREA_SIZE 5.0
+	#define MAS_PCK_AREA_SIZE 1.0
 #endif
 
 
 forward OnPlayerUseSyncPickup(playerid, pickupid, syncpickupid);
 
 
+
 // Optionall
-static const _mas_KEY_PRESS_TEXT[] = "Press alt";
+static const _mas_KEY_PRESS_TEXT[] = !"{ADFF2F}Press alt";
 
 
 enum MAS_PICKUP {
@@ -114,19 +118,18 @@ enum MAS_PICKUP {
 };
 
 
-static getPickup[MAX_PICKUPS][MAS_PICKUP];
+static getPickup[MAX_PICKUPS+1][MAS_PICKUP]; // The maximum size of INVALID_PICKUP is because INVALID_PICKUP is empty and it will be used
 
 
 // Antiflood system
-static pickupAntiFlood[MAX_PLAYERS];
+static pickupAntiFlood[MAX_PLAYERS char];
 
 // 
-static pickupNow[MAX_PLAYERS];
-
-// 
+static lastPickupCreated = INVALID_PICKUP;
 static pickupTotalPickup = 0;
 
 
+//
 PickupCreate(pick_Function[MAX_PICK_FUNC_NAME], 
 					pick_Model, 
 					pick_Type, 
@@ -169,57 +172,110 @@ PickupCreate(pick_Function[MAX_PICK_FUNC_NAME],
 		getPickup[mas_tmp_id][pickFunction] = mas_temp_func;
 	}
 
+	lastPickupCreated = mas_tmp_id;
 	pickupTotalPickup++;
 	return mas_tmp_id;	
 }
 
 
+// 
+PickupSetTag(bool:is_on_key = false, antiflood = 0, sync = INVALID_PICKUP) {
+	if(is_on_key == true) 		PickupSetOnKey(lastPickupCreated);
+	if(antiflood > 0)			PickupSetAntiFlood(lastPickupCreated, antiflood);
+	if(sync != INVALID_PICKUP)	SyncPickup(lastPickupCreated, sync);
+
+	return 1;
+}
+
+
+//
 ReplacePickup(&id, Float:new_x, Float:new_y, Float:new_z, new_vw = -1, new_int = -1) {
 	if(getPickup[id][!pickModel]) return 0;
 
+	#if defined _YSF_included
+		if(!IsValidPickup(id)) return 0;
+	#else 
+		if(id >= MAX_PICKUPS) return 0;
+	#endif
+
+	new mas_tmp = id;
+
 	DestroyDynamicPickup(id);
 
-	getPickup[id][pickX] = new_x;
-	getPickup[id][pickY] = new_y;
-	getPickup[id][pickZ] = new_z;
+	getPickup[mas_tmp][pickX] = new_x;
+	getPickup[mas_tmp][pickY] = new_y;
+	getPickup[mas_tmp][pickZ] = new_z;
 
-	if(new_int != -1) getPickup[id][pickInterior] = new_int;
-	if(new_vw != -1) getPickup[id][pickVirtualWorld] = new_vw;
+	if(new_int != -1) getPickup[mas_tmp][pickInterior] = new_int;
+	if(new_vw != -1) getPickup[mas_tmp][pickVirtualWorld] = new_vw;
 
 	id = CreateDynamicPickup(
-		getPickup[id][pickModel], 
-		getPickup[id][pickType], 
-		getPickup[id][pickX], 
-		getPickup[id][pickY], 
-		getPickup[id][pickZ], 
-		getPickup[id][pickVirtualWorld], 
-		getPickup[id][pickInterior], 
-		getPickup[id][pickPlayerid], 
-		getPickup[id][pickStreamDistance] 
+		getPickup[mas_tmp][pickModel], 
+		getPickup[mas_tmp][pickType], 
+		getPickup[mas_tmp][pickX], 
+		getPickup[mas_tmp][pickY], 
+		getPickup[mas_tmp][pickZ], 
+		getPickup[mas_tmp][pickVirtualWorld], 
+		getPickup[mas_tmp][pickInterior], 
+		getPickup[mas_tmp][pickPlayerid], 
+		getPickup[mas_tmp][pickStreamDistance] 
 	);
 
+	if(id != mas_tmp) {
+		getPickup[id] = getPickup[mas_tmp];
+		getPickup[mas_tmp] = getPickup[MAX_PICKUPS];
+	}
+
+	return 1;
+}
+
+
+DeletePickup(id) {
+	#if defined _YSF_included
+		if(!IsValidPickup(id)) return 0;
+	#else 
+		if(!IsPickupCreated(id)) return 0;
+	#endif
+
+	DestroyDynamicPickup(id);
+
+	getPickup[id] = getPickup[INVALID_PICKUP];
+	pickupTotalPickup--;
 	return 1;
 }
 
 
 SetPickupModel(&id, model) {
 	if(!getPickup[id][pickModel]) return 0;
-	
+
+	#if defined _YSF_included
+		if(!IsValidPickup(id)) return 0;
+	#else 
+		if(id >= MAX_PICKUPS) return 0;
+	#endif
+
+	new mas_tmp = id;
 	DestroyDynamicPickup(id);
 	
-	getPickup[id][pickModel] = model;
+	getPickup[mas_tmp][pickModel] = model;
 
 	id = CreateDynamicPickup(
-		getPickup[id][pickModel], 
-		getPickup[id][pickType], 
-		getPickup[id][pickX], 
-		getPickup[id][pickY], 
-		getPickup[id][pickZ], 
-		getPickup[id][pickVirtualWorld], 
-		getPickup[id][pickInterior], 
-		getPickup[id][pickPlayerid], 
-		getPickup[id][pickStreamDistance] 
+		getPickup[mas_tmp][pickModel], 
+		getPickup[mas_tmp][pickType], 
+		getPickup[mas_tmp][pickX], 
+		getPickup[mas_tmp][pickY], 
+		getPickup[mas_tmp][pickZ], 
+		getPickup[mas_tmp][pickVirtualWorld], 
+		getPickup[mas_tmp][pickInterior], 
+		getPickup[mas_tmp][pickPlayerid], 
+		getPickup[mas_tmp][pickStreamDistance] 
 	);
+
+	if(id != mas_tmp) {
+		getPickup[id] = getPickup[mas_tmp];
+		getPickup[mas_tmp] = getPickup[MAX_PICKUPS];
+	}
+	
 
 	return 1;
 }
@@ -227,22 +283,35 @@ SetPickupModel(&id, model) {
 
 SetPickupVirtualWorld(&id, world) {
 	if(getPickup[id][!pickModel]) return 0;
-	
+
+	#if defined _YSF_included
+		if(!IsValidPickup(id)) return 0;
+	#else 
+		if(id >= MAX_PICKUPS) return 0;
+	#endif
+
+
+	new mas_tmp = id;
 	DestroyDynamicPickup(id);
 	
-	getPickup[id][pickVirtualWorld] = world;
+	getPickup[mas_tmp][pickVirtualWorld] = world;
 
 	id = CreateDynamicPickup(
-		getPickup[id][pickModel], 
-		getPickup[id][pickType], 
-		getPickup[id][pickX], 
-		getPickup[id][pickY], 
-		getPickup[id][pickZ], 
-		getPickup[id][pickVirtualWorld], 
-		getPickup[id][pickInterior], 
-		getPickup[id][pickPlayerid], 
-		getPickup[id][pickStreamDistance] 
+		getPickup[mas_tmp][pickModel], 
+		getPickup[mas_tmp][pickType], 
+		getPickup[mas_tmp][pickX], 
+		getPickup[mas_tmp][pickY], 
+		getPickup[mas_tmp][pickZ], 
+		getPickup[mas_tmp][pickVirtualWorld], 
+		getPickup[mas_tmp][pickInterior], 
+		getPickup[mas_tmp][pickPlayerid], 
+		getPickup[mas_tmp][pickStreamDistance] 
 	);
+
+	if(id != mas_tmp) {
+		getPickup[id] = getPickup[mas_tmp];
+		getPickup[mas_tmp] = getPickup[MAX_PICKUPS];
+	}
 
 	return 1;
 }
@@ -250,27 +319,40 @@ SetPickupVirtualWorld(&id, world) {
 
 SetPickupType(&id, type) {
 	if(!getPickup[id][pickModel]) return 0;
-	
+
+	#if defined _YSF_included
+		if(!IsValidPickup(id)) return 0;
+	#else 
+		if(id >= MAX_PICKUPS) return 0;
+	#endif
+
+	new mas_tmp = id;
 	DestroyDynamicPickup(id);
 	
-	getPickup[id][pickType] = type;
+	getPickup[mas_tmp][pickType] = type;
 
 	id = CreateDynamicPickup(
-		getPickup[id][pickModel], 
-		getPickup[id][pickType], 
-		getPickup[id][pickX], 
-		getPickup[id][pickY], 
-		getPickup[id][pickZ], 
-		getPickup[id][pickVirtualWorld], 
-		getPickup[id][pickInterior], 
-		getPickup[id][pickPlayerid], 
-		getPickup[id][pickStreamDistance] 
+		getPickup[mas_tmp][pickModel], 
+		getPickup[mas_tmp][pickType], 
+		getPickup[mas_tmp][pickX], 
+		getPickup[mas_tmp][pickY], 
+		getPickup[mas_tmp][pickZ], 
+		getPickup[mas_tmp][pickVirtualWorld], 
+		getPickup[mas_tmp][pickInterior], 
+		getPickup[mas_tmp][pickPlayerid], 
+		getPickup[mas_tmp][pickStreamDistance] 
 	);
+
+	if(id != mas_tmp) {
+		getPickup[id] = getPickup[mas_tmp];
+		getPickup[mas_tmp] = getPickup[MAX_PICKUPS];
+	}
 
 	return 1;
 }
 
 
+//
 PickupSetOnKey(id) {
 	#if defined _YSF_included
 		if(!IsValidPickup(id)) return 0;
@@ -279,15 +361,16 @@ PickupSetOnKey(id) {
 	#endif
 
 	getPickup[id][pickClass] = PICKUP_ON_KEY;
-	getPickup[id][pickText] = Create3DTextLabel(
+	getPickup[id][pickText] = CreateDynamic3DTextLabel(
 		_mas_KEY_PRESS_TEXT, 
-		-1,
+		-1, 
 		getPickup[id][pickX], 
 		getPickup[id][pickY], 
-		getPickup[id][pickZ]+0.5, 
+		getPickup[id][pickZ]+0.3, 
 		MAS_PCK_TEXT_DRAWDIST, 
-		getPickup[id][pickVirtualWorld]
-	);
+		_, _, _, 
+		getPickup[id][pickVirtualWorld], 
+		getPickup[id][pickInterior]);
 
 	getPickup[id][pickArea] = CreateDynamicSphere(
 		getPickup[id][pickX], 
@@ -303,37 +386,57 @@ PickupSetOnKey(id) {
 }
 
 
+//
+PickupSetOnPickup(id) {
+	#if defined _YSF_included
+		if(!IsValidPickup(id)) return 0;
+	#else 
+		if(!IsPickupCreated(id)) return 0;
+	#endif
+
+	if(	
+		!getPickup[id][pickArea] || 
+		!getPickup[id][pickText] ||
+		getPickup[id][pickClass] != PICKUP_ON_KEY
+	) return 0;
+
+	DestroyDynamicArea(getPickup[id][pickArea]);
+	DestroyDynamic3DTextLabel(getPickup[id][pickText]);
+	getPickup[id][pickClass] = PICKUP_STANDART;
+
+	return 1;
+}
+
+
 
 SyncPickup(syncid, withid) {
+	#if defined _YSF_included
+		if(!IsValidPickup(syncid)) return 0;
+	#else 
+		if(!IsPickupCreated(syncid)) return 0;
+	#endif
+
+	#if defined _YSF_included
+		if(!IsValidPickup(withid)) return 0;
+	#else 
+		if(!IsPickupCreated(withid)) return 0;
+	#endif
+
 	getPickup[syncid][pickSynced] = withid;
 	getPickup[withid][pickSynced] = syncid;
 	return 1;
 }
-
-/* // Coming soon
-SyncLastPickups() {
-	getPickup[pickupTotalPickup][pickSynced] = pickupTotalPickup--;
-	getPickup[pickupTotalPickup--][pickSynced] = pickupTotalPickup;
-	return 1;
-}
-*/
 
 PickupSetAntiFlood(id, interval) {
 	getPickup[id][pickAntiFlood] = interval;
 	return 1;
 }
 
-/* // Coming soon
-PickupSetAntiFloodLast(interval) {
-	getPickup[pickupTotalPickup--][pickAntiFlood] = interval;
-	return 1;
-}
-*/
-
 public OnPlayerPickUpDynamicPickup(playerid, pickupid) {
 
 	if(getPickup[pickupid][pickClass] != PICKUP_ON_KEY) {
-		if(pickupAntiFlood[playerid] == 0) {
+
+		if(pickupAntiFlood{playerid} == 0) {
 			if(getPickup[pickupid][pickFunction]) 
 				CallLocalFunction(getPickup[pickupid][pickFunction], "dd", playerid, pickupid);
 			if(getPickup[pickupid][pickSynced] != INVALID_PICKUP) {
@@ -351,10 +454,9 @@ public OnPlayerPickUpDynamicPickup(playerid, pickupid) {
 					SetPlayerPos(playerid, getPickup[syncedid][pickX], getPickup[syncedid][pickY], getPickup[syncedid][pickZ]+0.1);
 					SetPlayerInterior(playerid, getPickup[syncedid][pickInterior]);
 					SetPlayerVirtualWorld(playerid, getPickup[syncedid][pickVirtualWorld]);
-					pickupAntiFlood[playerid] += PICKUP_SYNC_STANDART_ANTIFLOOD;
+					pickupAntiFlood{playerid} += PICKUP_SYNC_STANDART_ANTIFLOOD;
 				}
 			}
-			pickupAntiFlood[playerid] += getPickup[pickupid][pickAntiFlood];
 		}
 	}
 
@@ -426,8 +528,13 @@ forward _mas_pck_OnPlayerKeyStateChange(playerid, newkeys, oldkeys);
 
 //
 PickupFunction pickupAntiFloodUpdate() {
-	for(new i; i < MAX_PLAYERS; i++) {
-		if(pickupAntiFlood[i] != 0) pickupAntiFlood[i]--;
+	#if defined _FOREACH_LOCAL_VERSION
+	foreach(new i : Player)
+	#else 
+	for(new i; i < GetPlayerPoolSize(); i++) 
+	#endif
+	{
+		if(pickupAntiFlood{i} > 0) pickupAntiFlood{i}--;
 	}
 	return 1;
 }
@@ -445,9 +552,14 @@ PickupFunction GetPickupVirtualWorldEx(id) return getPickup[id][pickVirtualWorld
 PickupFunction GetPickupPlayerid(id) return getPickup[id][pickPlayerid];
 
 //
+PickupFunction IsPickupCreated(id) {
+	if(getPickup[id][pickClass] > 0) return true;
+	else return false;
+}
+
+//
 PickupFunction PickupEmitate(playerid, id) {
-	if(!getPickup[id][pickFunction]) return 0;
+	if(!strlen(getPickup[id][pickFunction])) return 0;
 	return CallLocalFunction(getPickup[id][pickFunction], "dd", playerid, id);
 }
 
-// GetPlayerPickup(playerid) return pickupNow[playerid];
