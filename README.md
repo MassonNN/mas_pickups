@@ -8,6 +8,8 @@ define PICKUP_SYNC_STANDART_ANTIFLOOD - default antiflood for synced pickups
 
 PickupCreate(pick_Function[23], pick_Model, pick_Type, Float:pick_X, Float:pick_Y, Float:pick_Z, pick_VirtualWorld = 0, pick_Interior = 0, pick_Playerid = 0, Float:streamdistance = STREAMER_PICKUP_SD)
 
+DeletePickup(id)
+
 SyncPickup(syncid, withid)
 
 PickupSetAntiFlood(id, interval)
@@ -29,6 +31,10 @@ SetPickupVirtualWorld(&id, world)
 SetPickupType(&id, type)
 
 PickupSetOnKey(id)
+
+PickupSetOnPickup(id)
+
+PickupSetTag(bool:is_on_key = false, antiflood = 0, sync = INVALID_PICKUP)
 
 PickupEmitate(playerid, id)
 
